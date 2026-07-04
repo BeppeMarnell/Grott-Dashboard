@@ -27,6 +27,12 @@ services:
     command:
       - |
         set -e
+        # Sentinel flag: once bootstrapped, exit immediately on every later `up`
+        # (no git work, no re-clone, no re-patch). Delete the volume to redo it.
+        if [ -f /src/grott/.solar-init-done ]; then
+          echo "grott-init: already initialized — nothing to do."
+          exit 0
+        fi
         if [ ! -f /src/grott/grottproxy.py ]; then
           echo "grott-init: cloning grott $$GROTT_COMMIT ..."
           git clone "$$GROTT_REPO" /src/grott
@@ -36,6 +42,7 @@ services:
           echo "grott-init: applying local-ACK patch ..."
           git -C /src/grott apply /patches/grottproxy-solar-local-ack.patch
         fi
+        touch /src/grott/.solar-init-done
         echo "grott-init: grott ready."
     restart: "no"
 
