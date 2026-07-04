@@ -122,39 +122,3 @@ import sqlite3; c=sqlite3.connect("data/solar.db")
 c.execute("DELETE FROM samples"); c.execute("DELETE FROM daily"); c.commit()
 PY
 ```
-
-## Why the proxy was patched (important)
-A Growatt ShineLink logger that considers itself **"Offline"** only sends
-keepalive pings and withholds inverter data until a *server* acknowledges its
-data records. In plain proxy mode grott relies on Growatt's cloud for that ACK;
-if the cloud stays silent (e.g. an unregistered logger), data never flows.
-
-`grott/grottproxy.py` is therefore patched (`build_local_ack`, pure-python CRC)
-to send the same ACK the Growatt server would, for record types
-`03/04/50/1b/20` coming from the logger. This makes the logger go **online** and
-stream data while we still decode it locally. The patch lives in
-`patches/grottproxy-solar-local-ack.patch` and is applied by
-`scripts/setup-grott.sh`; if you pull a fresh copy of grott, re-run that script
-(or search for "solar_panels_logger patch" to re-apply by hand).
-
-The patch also **echoes the logger's pings** (record types `16`/`19`) straight
-back to it, locally and independently of the cloud connection (search for "local
-ping echo"). Without this the logger reverts to *Offline* and stops streaming
-whenever its pings go unanswered — which happens every night when the inverter
-sleeps and the cloud socket drops, and used to require a manual power-cycle each
-morning. Always answering the ping keeps the logger Online, so it **auto-resumes
-data on its own** with no reboot. Check the logger's state any time at
-`http://<LOGGER_IP>/datalogsta` (admin/admin) — "State Info." should read
-*Online*.
-
-Timezone: the containers run UTC, so `SOLAR_TZ=Europe/Rome` (+ the `tzdata`
-package and `zoneinfo`) is used to stamp readings and attribute days in local
-time. Change `SOLAR_TZ` in `docker-compose.yml` if you move.
-
-## Notes
-- `daily.energy_kwh` = the max "energy today" value seen that day (the inverter
-  counter resets at midnight), so it's robust to missed readings.
-- The extension also stores the full raw register set per sample
-  (`samples.raw_json`) in case you want to chart more metrics later.
-- If field names differ on your firmware, the extension tries several known
-  Growatt names for power/today/total; raw json is always preserved.
