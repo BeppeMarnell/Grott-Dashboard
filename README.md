@@ -3,6 +3,8 @@
 Local, cloud-independent logger + web dashboard for a **Growatt** inverter,
 fed by a **ShineLanBox** datalogger.
 
+![Solar Command Center dashboard](docs/dashboard.png)
+
 ```
 Logger (<LOGGER_IP>) ──▶ grott proxy (this host :5279) ──▶ server.growatt.com
                               │  (decodes Growatt protocol)
