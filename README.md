@@ -1,4 +1,4 @@
-# ☀️ solar_panels_logger
+# ☀️ Solar Dashboard
 
 Local, cloud-independent logger + web dashboard for a **Growatt** inverter,
 fed by a **ShineLanBox** datalogger.
