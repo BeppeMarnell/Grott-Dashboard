@@ -146,7 +146,7 @@ function CompareDays({ dates }) {
 
       <div style={{ height: 300 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={merged} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
+          <LineChart data={merged} margin={{ top: 6, right: 8, left: -4, bottom: 0 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="x" type="number" domain={["dataMin", "dataMax"]} tickFormatter={minuteLabel}
               tick={{ fill: "#5a6473", fontSize: 11, fontFamily: "JetBrains Mono" }} minTickGap={42} axisLine={false} tickLine={false} />
@@ -213,7 +213,7 @@ function CompareMonths() {
 
       <div style={{ height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={bars} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+          <BarChart data={bars} margin={{ top: 6, right: 6, left: -4, bottom: 0 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="k" tickFormatter={monthLabel} tick={{ fill: "#8b97a8", fontSize: 12, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "#5a6473", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} width={46} />
@@ -258,7 +258,7 @@ function CompareYears() {
       </div>
       <div style={{ height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={rows} margin={{ top: 6, right: 8, left: -18, bottom: 0 }}>
+          <LineChart data={rows} margin={{ top: 6, right: 8, left: -4, bottom: 0 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="mo" tick={{ fill: "#5a6473", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: "#5a6473", fontSize: 11, fontFamily: "JetBrains Mono" }} axisLine={false} tickLine={false} width={48} />

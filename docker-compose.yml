@@ -55,9 +55,15 @@ services:
     depends_on:
       grott-init:
         condition: service_completed_successfully
+    # Load all settings from .env (optional — defaults below cover a fresh clone),
+    # then override the container-specific paths that must differ from the host.
+    env_file:
+      - path: .env
+        required: false
     environment:
+      # In-container mount path — overrides the relative SOLAR_DB from .env.
       SOLAR_DB: /data/solar.db
-      SOLAR_TZ: Europe/Rome
+      SOLAR_TZ: ${SOLAR_TZ:-Europe/Rome}
       PYTHONUNBUFFERED: "1"
     ports:
       - "5279:5279"
@@ -73,16 +79,23 @@ services:
       dockerfile: Dockerfile.web
     image: solar-web
     command: python web/app.py
+    # Load all settings from .env (optional — defaults below cover a fresh clone),
+    # then override the container-specific values that must differ from the host.
+    env_file:
+      - path: .env
+        required: false
     environment:
+      # In-container mount path — overrides the relative SOLAR_DB from .env.
       SOLAR_DB: /data/solar.db
-      SOLAR_TZ: Europe/Rome
+      # Bind all interfaces inside the container so the port mapping is reachable
+      # — overrides SOLAR_WEB_HOST=127.0.0.1 from .env.
       SOLAR_WEB_HOST: 0.0.0.0
-      SOLAR_WEB_PORT: "8088"
-      # Feed-in tariff (€/kWh) used to value production. Edit and `up -d` to change.
-      SOLAR_PRICE: "0.124"
-      SOLAR_REFRESH: "60"
+      SOLAR_TZ: ${SOLAR_TZ:-Europe/Rome}
+      SOLAR_WEB_PORT: ${SOLAR_WEB_PORT:-8088}
+      SOLAR_PRICE: ${SOLAR_PRICE:-0.124}
+      SOLAR_REFRESH: ${SOLAR_REFRESH:-60}
     ports:
-      - "8088:8088"
+      - "${SOLAR_WEB_PORT:-8088}:${SOLAR_WEB_PORT:-8088}"
     volumes:
       - ./data:/data
     depends_on:

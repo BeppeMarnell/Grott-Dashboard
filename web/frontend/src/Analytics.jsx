@@ -71,7 +71,7 @@ function MonthlyChart() {
       </div>
       <div style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={months} margin={{ top: 18, right: 6, left: -18, bottom: 0 }}>
+          <BarChart data={months} margin={{ top: 18, right: 6, left: -4, bottom: 0 }}>
             <defs>
               <linearGradient id="moGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#ffb627" stopOpacity={0.95} />

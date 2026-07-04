@@ -39,7 +39,6 @@ git clone git@github.com:BeppeMarnell/Grott-Dashboard.git
 cd Grott-Dashboard
 cp .env.example .env              # optional: edit tariff, timezone, IPs
 ```
-All settings are env vars — nothing personal is hard-coded.
 
 ## Run it (Docker — recommended)
 ```bash

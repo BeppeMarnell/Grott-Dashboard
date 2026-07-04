@@ -1,4 +1,6 @@
 .venv/
+# Local deployment settings & credentials (copy of .env.example).
+.env
 data/*.db
 data/*.db-journal
 __pycache__/
