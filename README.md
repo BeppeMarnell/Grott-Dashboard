@@ -28,15 +28,20 @@ cloud** so the ShinePhone app keeps working.
 - Auto-refreshing dashboard (every 60s by default).
 
 ## Setup (once)
-grott is a third-party project and is **not vendored** here. Fetch it and apply
-this project's local-ACK patch before the first run:
+grott is a third-party project and is **not vendored** here, so a fresh clone
+needs one bootstrap step before the first run:
 ```bash
+git clone git@github.com:BeppeMarnell/Grott-Dashboard.git
+cd Grott-Dashboard
 ./scripts/setup-grott.sh          # clones grott at a pinned commit + applies the patch
 cp .env.example .env              # then edit for your tariff, timezone, IPs
 ```
 `setup-grott.sh` reads `GROTT_REPO`/`GROTT_COMMIT` (see `.env.example`) and
 applies `patches/grottproxy-solar-local-ack.patch`. All other settings are env
-vars — copy `.env.example` and adjust; nothing personal is hard-coded.
+vars — copy `.env.example` and adjust; nothing personal is hard-coded. Then run
+it with Docker or natively (below), and point your logger at this host (further
+down). If you skip `setup-grott.sh`, the Docker build fails because `grott/`
+isn't present.
 
 ## Run it (Docker — recommended)
 ```bash
