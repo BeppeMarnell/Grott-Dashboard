@@ -1,17 +1,53 @@
-# Two services from one image, sharing the ./data volume (the SQLite db).
-#   grott : proxy/collector on :5279  (point the logger here)
-#   web   : dashboard on http://localhost:8088
+# Three services sharing the ./data volume (the SQLite db).
+#   grott-init : one-shot bootstrap — clones grott + applies the local-ACK patch
+#                into the shared grott_src volume (runs only until grott/ exists).
+#   grott      : proxy/collector on :5279  (point the logger here)
+#   web        : dashboard on http://localhost:8088
 #
-#   docker compose up -d --build
+#   docker compose up -d --build   # self-bootstraps grott on first run
 #   docker compose logs -f
+#
+# To force a fresh grott fetch (e.g. after bumping GROTT_COMMIT):
+#   docker compose down && docker volume rm solar_panels_logger_grott_src
 
 services:
+  # One-shot: populate the grott_src volume with a patched grott. Idempotent —
+  # skips cloning/patching if the volume already has a patched copy, then exits.
+  grott-init:
+    image: alpine/git:latest
+    environment:
+      GROTT_REPO: https://github.com/johanmeijer/grott.git
+      GROTT_COMMIT: fb52e2d4ff3065f60db45a7c2c82f2ad7e9f8463
+    volumes:
+      - grott_src:/src/grott
+      - ./patches:/patches:ro
+    entrypoint: ["/bin/sh", "-c"]
+    # $$ escapes compose interpolation so the shell in the container expands the
+    # env vars above (a single $ would be substituted by compose at parse time).
+    command:
+      - |
+        set -e
+        if [ ! -f /src/grott/grottproxy.py ]; then
+          echo "grott-init: cloning grott $$GROTT_COMMIT ..."
+          git clone "$$GROTT_REPO" /src/grott
+          git -C /src/grott checkout --quiet "$$GROTT_COMMIT"
+        fi
+        if ! grep -q "solar_panels_logger patch" /src/grott/grottproxy.py; then
+          echo "grott-init: applying local-ACK patch ..."
+          git -C /src/grott apply /patches/grottproxy-solar-local-ack.patch
+        fi
+        echo "grott-init: grott ready."
+    restart: "no"
+
   grott:
     build:
       context: .
       dockerfile: Dockerfile.grott
     image: solar-grott
     command: python grott/grott.py -c /app/grott.docker.ini
+    depends_on:
+      grott-init:
+        condition: service_completed_successfully
     environment:
       SOLAR_DB: /data/solar.db
       SOLAR_TZ: Europe/Rome
@@ -21,6 +57,7 @@ services:
     volumes:
       - ./data:/data
       - ./grott.docker.ini:/app/grott.docker.ini:ro
+      - grott_src:/app/grott
     restart: unless-stopped
 
   web:
@@ -44,3 +81,6 @@ services:
     depends_on:
       - grott
     restart: unless-stopped
+
+volumes:
+  grott_src:

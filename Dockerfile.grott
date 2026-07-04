@@ -6,7 +6,8 @@ WORKDIR /app
 COPY requirements-grott.txt .
 RUN pip install --no-cache-dir -r requirements-grott.txt
 
-COPY grott/ ./grott/
+# grott source is NOT baked in — the `grott-init` service clones + patches it
+# into the shared `grott_src` volume, mounted here at /app/grott at runtime.
 COPY extension/ ./extension/
 COPY grott.docker.ini ./grott.docker.ini
 

@@ -29,27 +29,31 @@ cloud** so the ShinePhone app keeps working.
 - **History chart**: last 60 days of kWh and € advantage.
 - Auto-refreshing dashboard (every 60s by default).
 
-## Setup (once)
-grott is a third-party project and is **not vendored** here, so a fresh clone
-needs one bootstrap step before the first run:
+## Setup
+grott is a third-party project and is **not vendored** here. With Docker you
+don't need to fetch it yourself — a one-shot `grott-init` service clones grott
+(at a pinned commit) and applies `patches/grottproxy-solar-local-ack.patch` into
+a shared volume on first `up`. Just clone and go:
 ```bash
 git clone git@github.com:BeppeMarnell/Grott-Dashboard.git
 cd Grott-Dashboard
-./scripts/setup-grott.sh          # clones grott at a pinned commit + applies the patch
-cp .env.example .env              # then edit for your tariff, timezone, IPs
+cp .env.example .env              # optional: edit tariff, timezone, IPs
 ```
-`setup-grott.sh` reads `GROTT_REPO`/`GROTT_COMMIT` (see `.env.example`) and
-applies `patches/grottproxy-solar-local-ack.patch`. All other settings are env
-vars — copy `.env.example` and adjust; nothing personal is hard-coded. Then run
-it with Docker or natively (below), and point your logger at this host (further
-down). If you skip `setup-grott.sh`, the Docker build fails because `grott/`
-isn't present.
+All settings are env vars — nothing personal is hard-coded.
 
 ## Run it (Docker — recommended)
 ```bash
-docker compose up -d --build     # starts grott (:5279) + dashboard (:8088)
+docker compose up -d --build     # grott-init bootstraps grott, then grott (:5279) + dashboard (:8088)
 docker compose logs -f           # watch
 docker compose down              # stop
+```
+On the first `up`, `grott-init` runs once to populate the `grott_src` volume,
+then exits; `grott` and `web` start after it. It's idempotent — later runs skip
+straight past it. To force a fresh grott fetch (e.g. after bumping
+`GROTT_COMMIT` in `docker-compose.yml`):
+```bash
+docker compose down
+docker volume rm solar_panels_logger_grott_src
 ```
 grott and the dashboard are **separate images** (`solar-grott`, `solar-web`).
 Rebuild the UI without disturbing data capture:
@@ -63,9 +67,11 @@ Both services share the `./data` volume (the SQLite db). Tariff/refresh are env
 vars in `docker-compose.yml` (`SOLAR_PRICE`, `SOLAR_REFRESH`).
 
 ### Run it (native, without Docker)
+Native runs don't have the init service, so fetch grott once yourself first:
 ```bash
-./run-grott.sh     # collector/proxy on :5279
-./run-web.sh       # dashboard on http://127.0.0.1:8088
+./scripts/setup-grott.sh   # clones grott at the pinned commit + applies the patch
+./run-grott.sh             # collector/proxy on :5279
+./run-web.sh               # dashboard on http://127.0.0.1:8088
 ```
 
 ## Point the logger at this host
