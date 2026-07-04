@@ -1,0 +1,4 @@
+# grott collector deps. grott imports paho even when MQTT is unused; tzdata
+# lets the SQLite extension resolve the local timezone (zoneinfo) on slim images.
+paho-mqtt==2.1.0
+tzdata==2025.2

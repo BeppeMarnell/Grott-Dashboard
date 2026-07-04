@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>☀️ Solar Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1419; --card:#1a2230; --line:#273142; --text:#e7edf5;
+    --muted:#8a98ab; --accent:#ffb627; --green:#33d17a; --blue:#5aa9ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+       background:var(--bg);color:var(--text)}
+  header{display:flex;align-items:baseline;justify-content:space-between;
+         padding:20px 28px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:8px}
+  h1{font-size:20px;margin:0;font-weight:600}
+  .sub{color:var(--muted);font-size:13px}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+        padding:18px 20px}
+  .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  .big{font-size:30px;font-weight:700;margin-top:6px}
+  .big small{font-size:14px;color:var(--muted);font-weight:500;margin-left:4px}
+  .money{color:var(--green)}
+  .accent{color:var(--accent)}
+  .blue{color:var(--blue)}
+  .live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;
+            background:var(--green);margin-right:6px;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .chart-card{margin-top:20px}
+  h2{font-size:15px;margin:0 0 12px;font-weight:600}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:18px}
+  .stale{color:#ff6b6b}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>☀️ Solar Dashboard</h1>
+    <div class="sub">Growatt FPH1B03013 · live local data via grott</div>
+  </div>
+  <div class="sub"><span id="dot" class="live-dot"></span><span id="status">connecting…</span></div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <div class="label">Producing now</div>
+      <div class="big accent" id="live_power">– <small>W</small></div>
+    </div>
+    <div class="card">
+      <div class="label">Today — energy</div>
+      <div class="big blue" id="today_kwh">– <small>kWh</small></div>
+    </div>
+    <div class="card">
+      <div class="label">Today — advantage</div>
+      <div class="big money" id="today_value">– <small>{{ currency }}</small></div>
+    </div>
+    <div class="card">
+      <div class="label">Peak today</div>
+      <div class="big" id="today_peak">– <small>W</small></div>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:16px">
+    <div class="card">
+      <div class="label">This month</div>
+      <div class="big" id="month_kwh">– <small>kWh</small></div>
+      <div class="money" id="month_value">–</div>
+    </div>
+    <div class="card">
+      <div class="label">This year</div>
+      <div class="big" id="year_kwh">– <small>kWh</small></div>
+      <div class="money" id="year_value">–</div>
+    </div>
+    <div class="card">
+      <div class="label">All time recorded</div>
+      <div class="big" id="all_kwh">– <small>kWh</small></div>
+      <div class="money" id="all_value">–</div>
+    </div>
+    <div class="card">
+      <div class="label">Inverter lifetime total</div>
+      <div class="big" id="total_kwh">– <small>kWh</small></div>
+      <div class="sub">tariff: {{ '%.3f'|format(price) }} {{ currency }}/kWh</div>
+    </div>
+  </div>
+
+  <div class="card chart-card">
+    <h2>Daily production &amp; advantage (last 60 days)</h2>
+    <canvas id="chart" height="110"></canvas>
+  </div>
+</div>
+
+<footer>Auto-refreshing every {{ refresh }}s · solar_panels_logger</footer>
+
+<script>
+const REFRESH = {{ refresh }} * 1000;
+let chart;
+
+function fmt(v, d=2){ return (v==null?0:v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}); }
+
+async function refresh(){
+  try{
+    const s = await (await fetch('/api/summary')).json();
+    document.getElementById('live_power').innerHTML = fmt(s.live_power_w,0)+' <small>W</small>';
+    document.getElementById('today_kwh').innerHTML  = fmt(s.today_kwh)+' <small>kWh</small>';
+    document.getElementById('today_value').innerHTML= fmt(s.today_value)+' <small>'+s.currency+'</small>';
+    document.getElementById('today_peak').innerHTML = fmt(s.today_peak_w,0)+' <small>W</small>';
+    document.getElementById('month_kwh').innerHTML  = fmt(s.month_kwh)+' <small>kWh</small>';
+    document.getElementById('month_value').textContent = fmt(s.month_value)+' '+s.currency;
+    document.getElementById('year_kwh').innerHTML   = fmt(s.year_kwh)+' <small>kWh</small>';
+    document.getElementById('year_value').textContent  = fmt(s.year_value)+' '+s.currency;
+    document.getElementById('all_kwh').innerHTML    = fmt(s.all_kwh)+' <small>kWh</small>';
+    document.getElementById('all_value').textContent   = fmt(s.all_value)+' '+s.currency;
+    document.getElementById('total_kwh').innerHTML  = fmt(s.total_kwh,0)+' <small>kWh</small>';
+
+    const st = document.getElementById('status'), dot = document.getElementById('dot');
+    if(s.last_seen){
+      const age = (Date.now() - new Date(s.last_seen).getTime())/1000;
+      if(age < 600){ st.textContent = 'live · last reading '+Math.round(age)+'s ago'; st.className=''; dot.style.background='var(--green)'; }
+      else { st.textContent = 'last seen '+new Date(s.last_seen).toLocaleString(); st.className='stale'; dot.style.background='#ff6b6b'; }
+    } else { st.textContent = 'waiting for first reading…'; dot.style.background='var(--muted)'; }
+  }catch(e){ document.getElementById('status').textContent='dashboard offline?'; }
+
+  try{
+    const h = await (await fetch('/api/history')).json();
+    const ctx = document.getElementById('chart');
+    const data = {
+      labels: h.days,
+      datasets: [
+        {label:'kWh', data:h.kwh, backgroundColor:'#5aa9ff', borderRadius:4, yAxisID:'y'},
+        {label:h.currency+' advantage', type:'line', data:h.value, borderColor:'#33d17a',
+         backgroundColor:'#33d17a', tension:.3, pointRadius:2, yAxisID:'y1'}
+      ]
+    };
+    const opts = {responsive:true, interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#8a98ab'}}},
+      scales:{
+        x:{ticks:{color:'#8a98ab',maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{color:'#27314222'}},
+        y:{position:'left',title:{display:true,text:'kWh',color:'#8a98ab'},ticks:{color:'#8a98ab'},grid:{color:'#27314244'}},
+        y1:{position:'right',title:{display:true,text:h.currency,color:'#8a98ab'},ticks:{color:'#8a98ab'},grid:{drawOnChartArea:false}}
+      }};
+    if(chart){ chart.data=data; chart.update(); }
+    else { chart = new Chart(ctx,{type:'bar',data,options:opts}); }
+  }catch(e){}
+}
+
+refresh();
+setInterval(refresh, REFRESH);
+</script>
+</body>
+</html>

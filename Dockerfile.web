@@ -1,0 +1,26 @@
+# Web dashboard image — React build (node stage) served by Flask (python stage).
+# Rebuild this freely for UI changes; it does not touch the grott container.
+
+# --- stage 1: build the React frontend ---
+FROM node:20-slim AS frontend
+WORKDIR /fe
+COPY web/frontend/package.json ./
+RUN npm install
+COPY web/frontend/ ./
+RUN npm run build
+
+# --- stage 2: python runtime ---
+FROM python:3.12-slim
+WORKDIR /app
+
+COPY requirements-web.txt .
+RUN pip install --no-cache-dir -r requirements-web.txt
+
+COPY web/ ./web/
+COPY config.ini ./config.ini
+COPY --from=frontend /fe/dist ./web/frontend/dist
+
+ENV SOLAR_DB=/data/solar.db
+RUN mkdir -p /data
+
+CMD ["python", "web/app.py"]

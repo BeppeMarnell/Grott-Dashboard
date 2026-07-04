@@ -1,0 +1,4 @@
+# Never let line-ending normalization corrupt the grott patch (git apply is
+# byte-sensitive). Keep patches and shell scripts as-is.
+*.patch -text
+*.sh    text eol=lf

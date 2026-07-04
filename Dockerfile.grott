@@ -1,0 +1,17 @@
+# grott proxy/collector image — intentionally minimal and stable so it is
+# rebuilt/restarted rarely (restarting it makes the logger re-onboard).
+FROM python:3.12-slim
+WORKDIR /app
+
+COPY requirements-grott.txt .
+RUN pip install --no-cache-dir -r requirements-grott.txt
+
+COPY grott/ ./grott/
+COPY extension/ ./extension/
+COPY grott.docker.ini ./grott.docker.ini
+
+ENV PYTHONPATH=/app/extension \
+    SOLAR_DB=/data/solar.db
+RUN mkdir -p /data
+
+CMD ["python", "grott/grott.py", "-c", "grott.docker.ini"]

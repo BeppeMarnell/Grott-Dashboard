@@ -1,0 +1,12 @@
+.venv/
+data/*.db
+data/*.db-journal
+__pycache__/
+*.pyc
+*.log
+# Upstream grott is fetched by scripts/setup-grott.sh (not vendored here).
+grott/
+# Auto-generated snapshots of the local logger/network config (personal).
+backups/
+web/frontend/node_modules/
+web/frontend/dist/

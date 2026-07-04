@@ -1,0 +1,94 @@
+diff --git a/grottproxy.py b/grottproxy.py
+index 2b03290..2325664 100644
+--- a/grottproxy.py
++++ b/grottproxy.py
+@@ -72,6 +72,32 @@ def validate_record(xdata):
+     return(returncc)
+ 
+ 
++# --- solar_panels_logger patch: local ACK helpers ---------------------------
++# Some Growatt loggers (e.g. an unregistered ShineLanBox) consider themselves
++# "offline" and only send keepalive pings, buffering real data, until a SERVER
++# acknowledges their data records. In plain proxy mode grott relies on the cloud
++# for that ACK; if the cloud stays silent the logger never streams data. These
++# helpers let the proxy send the same ACK the Growatt server would, so the
++# logger goes online and flushes its data to us. Pure-python CRC (no libscrc).
++def _crc16_modbus(data: bytes) -> int:
++    crc = 0xFFFF
++    for b in data:
++        crc ^= b
++        for _ in range(8):
++            crc = (crc >> 1) ^ 0xA001 if (crc & 1) else (crc >> 1)
++    return crc
++
++def build_local_ack(data: bytes) -> bytes:
++    header = data[0:8].hex()
++    protocol = header[6:8]
++    rectype = header[12:16]
++    if protocol == "02":
++        return bytes.fromhex(header[0:8] + "0003" + rectype + "00")
++    headerackx = bytes.fromhex(header[0:8] + "0003" + rectype + "47")
++    return headerackx + _crc16_modbus(headerackx).to_bytes(2, "big")
++# --- end patch --------------------------------------------------------------
++
++
+ class Forward:
+     def __init__(self):
+         self.forward = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+@@ -91,6 +117,7 @@ class Proxy:
+ 
+     def __init__(self, conf):
+         print("\nGrott proxy mode started")
++        self.clientsocks = set()   # sockets that are loggers (for local ACK patch)
+ 
+         # for compatibility reasons test if libscrc is installed and send error message
+         # if not installed processing wil continue but records will only be validated on length and not on crc. 
+@@ -152,6 +179,7 @@ class Proxy:
+             self.input_list.append(forward)
+             self.channel[clientsock] = forward
+             self.channel[forward] = clientsock
++            self.clientsocks.add(clientsock)   # mark logger side for local ACK
+         else:
+             if conf.verbose: 
+                 print("\t - Can't establish connection with remote server."),
+@@ -166,6 +194,7 @@ class Proxy:
+             except:  
+                 print("\t -", "peer has disconnected")
+ 
++        self.clientsocks.discard(self.s)
+         #remove objects from input_list
+         self.input_list.remove(self.s)
+         self.input_list.remove(self.channel[self.s])
+@@ -233,6 +262,32 @@ class Proxy:
+ 
+         # send data to destination
+         self.channel[self.s].send(data)
++
++        # solar_panels_logger patch: if this came from the logger and is a data/
++        # announce record, send a local server-style ACK so an "offline" logger
++        # goes online and streams its data (does not affect cloud forwarding).
++        if self.s in self.clientsocks:
++            rectype = header[14:16]
++            if rectype in ("03", "04", "50", "1b", "20"):
++                try:
++                    self.s.send(build_local_ack(data))
++                    if conf.verbose: print("\t - Grott: local ACK sent for record type", rectype)
++                except Exception as e:
++                    if conf.verbose: print("\t - Grott: local ACK failed:", e)
++            elif rectype in ("16", "19"):
++                # Ping/keepalive. Echo it straight back to the logger, locally and
++                # independently of the cloud forward connection. A Growatt logger
++                # reverts to "offline" (and stops streaming data) if its pings go
++                # unanswered -- which happens whenever the cloud socket flaps or the
++                # inverter sleeps overnight. Always answering the ping ourselves keeps
++                # the logger "online", so it auto-resumes data each morning with no
++                # power-cycle. The data records it then sends are ACKed above.
++                try:
++                    self.s.send(data)
++                    if conf.verbose: print("\t - Grott: local ping echo sent for record type", rectype)
++                except Exception as e:
++                    if conf.verbose: print("\t - Grott: local ping echo failed:", e)
++
+         if len(data) > conf.minrecl :
+             #process received data
+             procdata(conf,data)    

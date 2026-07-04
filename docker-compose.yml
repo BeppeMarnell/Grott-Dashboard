@@ -1,0 +1,46 @@
+# Two services from one image, sharing the ./data volume (the SQLite db).
+#   grott : proxy/collector on :5279  (point the logger here)
+#   web   : dashboard on http://localhost:8088
+#
+#   docker compose up -d --build
+#   docker compose logs -f
+
+services:
+  grott:
+    build:
+      context: .
+      dockerfile: Dockerfile.grott
+    image: solar-grott
+    command: python grott/grott.py -c /app/grott.docker.ini
+    environment:
+      SOLAR_DB: /data/solar.db
+      SOLAR_TZ: Europe/Rome
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "5279:5279"
+    volumes:
+      - ./data:/data
+      - ./grott.docker.ini:/app/grott.docker.ini:ro
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: solar-web
+    command: python web/app.py
+    environment:
+      SOLAR_DB: /data/solar.db
+      SOLAR_TZ: Europe/Rome
+      SOLAR_WEB_HOST: 0.0.0.0
+      SOLAR_WEB_PORT: "8088"
+      # Feed-in tariff (€/kWh) used to value production. Edit and `up -d` to change.
+      SOLAR_PRICE: "0.124"
+      SOLAR_REFRESH: "60"
+    ports:
+      - "8088:8088"
+    volumes:
+      - ./data:/data
+    depends_on:
+      - grott
+    restart: unless-stopped

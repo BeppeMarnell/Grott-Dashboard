@@ -1,0 +1,9 @@
+.venv/
+data/
+**/__pycache__/
+*.pyc
+grott/.git/
+.git/
+*.log
+web/frontend/node_modules/
+web/frontend/dist/
