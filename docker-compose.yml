@@ -44,7 +44,11 @@ services:
         git -C /src/grott reset  --quiet --hard  "$$GROTT_COMMIT"
         git -C /src/grott clean  -qfd
         echo "grott-init: applying local-ACK patch ..."
-        git -C /src/grott apply /patches/grottproxy-solar-local-ack.patch
+        # --ignore-whitespace: upstream grott ships grottproxy.py with CRLF line
+        # endings, but the committed patch is normalized to LF by .gitattributes,
+        # so the contexts differ only by trailing CR. Without this the apply fails
+        # ("patch failed: grottproxy.py:72") on a clean clone.
+        git -C /src/grott apply --ignore-whitespace /patches/grottproxy-solar-local-ack.patch
         touch /src/grott/.solar-init-done
         echo "grott-init: grott ready."
     restart: "no"
