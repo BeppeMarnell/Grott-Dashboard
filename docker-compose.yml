@@ -33,15 +33,18 @@ services:
           echo "grott-init: already initialized — nothing to do."
           exit 0
         fi
-        if [ ! -f /src/grott/grottproxy.py ]; then
+        if [ ! -e /src/grott/.git ]; then
           echo "grott-init: cloning grott $$GROTT_COMMIT ..."
           git clone "$$GROTT_REPO" /src/grott
-          git -C /src/grott checkout --quiet "$$GROTT_COMMIT"
         fi
-        if ! grep -q "solar_panels_logger patch" /src/grott/grottproxy.py; then
-          echo "grott-init: applying local-ACK patch ..."
-          git -C /src/grott apply /patches/grottproxy-solar-local-ack.patch
-        fi
+        # Force a clean, pinned base even if a prior run left the tree dirty or
+        # half-patched — otherwise `git apply` loops forever on a stale volume.
+        git -C /src/grott fetch --quiet origin || true
+        git -C /src/grott checkout --quiet --force "$$GROTT_COMMIT"
+        git -C /src/grott reset  --quiet --hard  "$$GROTT_COMMIT"
+        git -C /src/grott clean  -qfd
+        echo "grott-init: applying local-ACK patch ..."
+        git -C /src/grott apply /patches/grottproxy-solar-local-ack.patch
         touch /src/grott/.solar-init-done
         echo "grott-init: grott ready."
     restart: "no"
